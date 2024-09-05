@@ -40,18 +40,18 @@ estimates_difference_standard = parameter_estimation(difference_moments, differe
 # set up initial guess and bounds
 bounds          = [(0.0,1.0), # var_perm
                    (0.0,1.0), # var_tran
-                   (0.2,3.0), # omega is only one likely to be above 1.0
+                   (0.0,1.0), # rho_passing is only one likely to be above 1.0
                    (0.0,1.0), # bonus
-                   (0.0,0.2), # rho is less than 0.2
+                   (0.8,1.0), # rho_persistent is greater than 0.2
                    (0.0,1.0)] # var_init
 init_params      = np.array([0.005,  #var perm
-                             0.05, #var tran
-                             0.5,                #omega
-                             0.4,#0.3                #bonus
-                             0.0, # rho perm
+                             0.03, #var tran
+                             0.7,                #rho_passing
+                             0.3,#  bonus
+                             1.0, # rho_persistent
                              0.069]) # var init 
 # First do levels
-optimize_index = np.array([0,1,2,3,-1,5]) #exclude rho from estimation
+optimize_index = np.array([0,1,2,3,-1,5]) #exclude rho_persistent from estimation
 estimates_levels_CHT = parameter_estimation(level_moments, level_omega, init_params, \
                          model="CHT", levels_or_differences="levels", MD_weight_type="diagonal", \
                          optimize_index=optimize_index, bounds=bounds)
@@ -68,7 +68,7 @@ all_estimates = pd.DataFrame(([np.round(np.concatenate((estimates_levels_standar
  np.round(estimates_levels_CHT,3),\
  np.round(estimates_differences_CHT,3)]), \
 ['Standard, levels', 'Standard, differences', 'CHT, levels', 'CHT, differences'],\
-['var_perm','var_tran','theta or omega', 'b', 'rho', 'var_init'])
+['var_perm','var_tran','theta or rho_passing', 'b', 'rho_persistent', 'var_init'])
 print(all_estimates)
 
 

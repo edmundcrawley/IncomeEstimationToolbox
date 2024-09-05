@@ -2,7 +2,7 @@
 
 import numpy as np
 from scipy.optimize import minimize
-from tools import vech, inv_vech, cov_passing_levels, cov_persistent_levels
+from tools import vech, inv_vech
 
 ###############################################################################
 # CHT levels covariance matricies
@@ -18,57 +18,30 @@ def cov_bonusshk_levels(var_bonus, T):
   cov_y_vec=vech(cov_y)
   return cov_y_vec
 
-def cov_passingshk_levels(var_passing, omega, T):
+def cov_passingshk_levels(var, rho, T):
   '''
-  Calculates the levels covariance matrix for passing shock process
+  Calculates the levels covariance matrix for the discrete-time version of passing shocks
   '''
   # Set up covariance matrix, initialized to zero
-  cov_y  = np.zeros((T,T)) #/* Income */
-  # pre-calculate covariance matrix of a stochasic process with shocks
-  # that decay at rate omega, will be updated if omega is time-varying
-  cov_omega, components = cov_passing_levels(omega)
+  cov_y  = np.zeros((T,T)) 
   for i in range(T):
-      cov_y[i,i] = var_passing
-  for i in range(T-1):
-      for j in range (T-1-i):
-          cov_y[j,1+i+j] = var_passing*cov_omega[0]/cov_omega[1]*np.exp(-omega)**i
-          cov_y[1+i+j,j] = cov_y[j,1+i+j]
-  cov_y_vec = vech(cov_y)
+      for j in range(i+1):
+          cov_y[i,j] = var*rho**(i-j)
+  cov_y_vec=vech(cov_y)
   return cov_y_vec
 
 
-def cov_persistentshk_levels(var_persistent, rho, T):
+def cov_AR1_levels(var_AR1, rho_AR1, T):
   '''
-  Calculates the covariance matrix for an exponentially decaying stochastic 
-  process (rho=0 is a time-aggregated random walk)
+  Calculates the levels covariance matrix for AR(1) shocks that arrive in discrete,
+  annual periods. This is the persistent shock in the standard model.
   '''
-  # Set up covariance matrix, initialized to zero
-  cov_y  = np.zeros((T,T)) #/* Income */
-  # calculate covariance matrix of a stochasic process with shocks
-  # that decay at rate rho
-  cov_rho, components = cov_persistent_levels(rho)
-  #first add in components of variance from shocks from before time starts
-  k_range = np.array(range(T))
-  # Now add in compoments of variance for each time period (loop over k is for shock years, loop over t is the year for which we are calculating the variance/covariance)
-  for k in k_range:
-      # Now loop over the T years in which we measure variance/covariance, adding in the effect of shocks that originate at time k
-      for t in range(T):
-          if (t-k>=1):
-              for m in range(T-t-1):
-                  if t+1+m<=T-1:
-                      cov_y[t,t+1+m] += var_persistent*components[0,1]*np.exp(-(2*(t-k-1)+m)*rho)
-              cov_y[t,t  ]     += var_persistent*components[1,1]*np.exp(-2*(t-k-1)*rho)
-          if (t-k==0):
-              for m in range(T-t-1):
-                  if t+1+m<=T-1:
-                      cov_y[t,t+1+m] += var_persistent*components[0,0]*np.exp(-m*rho)
-              cov_y[t,t  ]     += var_persistent*components[1,0]
-  # So far we've created an upper triangular matrix, reflect it along diagonal:
-  for t in np.array(range(T)):
-      for j in np.array(range(T-t-1))+1:
-          cov_y[t+j,t] = cov_y[t,t+j]
-  # Turn matrix into vector
-  cov_y_vec = vech(cov_y)
+  # Create covariance matrix
+  cov_y  = np.zeros((T,T)) 
+  for i in range(T):
+      for j in range(i+1):
+          cov_y[i,j] += np.sum(var_AR1*rho_AR1**(2*np.array(range(j+1))))*rho_AR1**(i-j)
+  cov_y_vec=vech(cov_y)
   return cov_y_vec
 
     
@@ -76,10 +49,10 @@ def cov_CHT_model_levels(params,T):
     '''
     Crawley, Holm, Tretvoll model is a composite of there shock types (and in initial variance)
     '''
-    [var_perm, var_tran, omega, bonus, rho, var_init] = params
-    persistent_inc_cov = cov_persistentshk_levels(var_perm,rho,T)
+    [var_perm, var_tran, rho, bonus, rho_persistent, var_init] = params
+    persistent_inc_cov = cov_AR1_levels(var_perm,rho_persistent,T)
     bonus_inc_cov = cov_bonusshk_levels(var_tran*bonus,T)
-    passing_inc_cov = cov_passingshk_levels(var_tran*(1-bonus),omega,T)
+    passing_inc_cov = cov_passingshk_levels(var_tran*(1-bonus),rho,T)
     init_perm_inc_cov = vech(var_init*np.ones((T,T)))
        
     cov_CHT_levels = persistent_inc_cov + bonus_inc_cov + passing_inc_cov + init_perm_inc_cov
@@ -104,20 +77,7 @@ def cov_MA1_levels(var_tran, theta, T):
   cov_y_vec = vech(cov_y)
   return cov_y_vec 
 
-def cov_AR1_levels(var_AR1, rho, T):
-  '''
-  Calculates the levels covariance matrix for AR(1) shocks that arrive in discrete,
-  annual periods. This is the persistent shock in the standard model.
-  '''
-  # Create covariance matrix
-  cov_y  = np.zeros((T,T)) 
-  for i in range(T):
-      for j in range(i+1):
-          cov_y[i,j] += np.sum(var_AR1*rho**(2*np.flip(np.array(range(j+1)))))*rho**(i-j)
-  cov_y_vec=vech(cov_y)
-  return cov_y_vec
-
-      
+     
 def cov_standard_model_levels(params,T):
     '''
     The covariance of the standard model is composed of persistent shocks and an MA(1) (+ initial variance)
