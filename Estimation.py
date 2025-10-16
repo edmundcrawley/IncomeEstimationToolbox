@@ -63,10 +63,10 @@ estimates_differences_CHT = parameter_estimation(difference_moments, difference_
 ###############################################################################
 # Print all estimates
 ###############################################################################    
-all_estimates = pd.DataFrame(([np.round(np.concatenate((estimates_levels_standard[0:3],[0],estimates_levels_standard[3:])),3),\
- np.round(np.concatenate((estimates_difference_standard[0:3],[0],estimates_difference_standard[3:])),3),\
+all_estimates = pd.DataFrame(([np.round(np.concatenate((estimates_levels_standard[0:3],[np.nan],estimates_levels_standard[3:])),3),\
+ np.round(np.concatenate((estimates_difference_standard[0:3],[np.nan],[estimates_difference_standard[3]],[np.nan])),3),\
  np.round(estimates_levels_CHT,3),\
- np.round(estimates_differences_CHT,3)]), \
+ np.round(np.concatenate((estimates_differences_CHT[0:5],[np.nan])),3)]), \
 ['Standard, levels', 'Standard, differences', 'CHT, levels', 'CHT, differences'],\
 ['var_perm','var_tran','theta or rho_passing', 'b', 'rho_persistent', 'var_init'])
 print(all_estimates)
